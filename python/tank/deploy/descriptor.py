@@ -533,6 +533,7 @@ def get_from_location_and_paths(app_or_engine, pc_path, bundle_install_path, loc
     from .dev_descriptor import TankDevDescriptor
     from .git_descriptor import TankGitDescriptor
     from .manual_descriptor import TankManualDescriptor
+    from .perforce_descriptor import TankPerforceDescriptor
 
     # temporary implementation. Todo: more error checks!
 
@@ -557,6 +558,11 @@ def get_from_location_and_paths(app_or_engine, pc_path, bundle_install_path, loc
     # location: {"type": "dev", "windows_path": "c:\\path\\to\\app", "linux_path": "/path/to/app", "mac_path": "/path/to/app"}
     elif location_dict.get("type") == "dev":
         return TankDevDescriptor(pc_path, bundle_install_path, location_dict)
+
+    # perforce depot path format
+    # location: {"type": "perforce", "path": "server:port//depot/path/to/app", "version": "AppName_v0.1.0"
+    elif location_dict.get("type") == "perforce":
+        return TankPerforceDescriptor(pc_path, bundle_install_path, location_dict, app_or_engine)
 
     else:
         raise TankError("%s: Invalid location dict '%s'" % (app_or_engine, location_dict))
