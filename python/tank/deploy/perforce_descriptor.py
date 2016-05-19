@@ -5,11 +5,12 @@ This Perforce descriptor is for a Perforce-based workflow.
 It will base version numbering off labels in Perforce.
 """
 
-import os
-import re
 import copy
-import uuid
+import os
+import P4
+import re
 import tempfile
+import uuid
 
 from .util import subprocess_check_output
 from ..api import Tank
@@ -83,8 +84,14 @@ class TankPerforceDescriptor(VersionedSingletonDescriptor):
             # nothing to do!
             return
 
-        else:
-            raise NotImplementedError
+        target = self.get_path()
+        if not os.path.exists(target):
+            old_umask = os.umask(0)
+            os.makedirs(target, 0777)
+            os.umask(old_umask)
+
+        # Download files from the depot at the desired tag target location
+        self.__sync_from_perforce(target)
 
     def find_latest_version(self, constraint_pattern=None):
         """
@@ -193,25 +200,20 @@ class TankPerforceDescriptor(VersionedSingletonDescriptor):
         """
         raise NotImplementedError
 
-    def __create_temp_workspace(self):
-        """
-        Create a temporary workspace for syncing the app from Perforce.
-
-        :raises: P4Exception if creation fails
-        """
-        raise NotImplementedError
-
-    def __delete_temp_workspace(self):
-        """
-        Delete the temporary workspace created for syncing the app.
-
-        :raises: P4Exception if delete fails
-        """
-
-    def __sync_from_perforce(self):
+    def __sync_from_perforce(self, target_path):
         """
         Syncs temp workspace to label matching desired version.
 
         :raises: P4Exception if sync fails
         """
-        raise NotImplementedError
+        # ToDo: Add version tag parameter to P4 commands
+
+        p4 = P4.P4()
+        p4.connect()
+        sanitized_depot_path = self._path.rstrip('./')
+        src_files = [i['depotFile'] for i in p4.run_files(sanitized_depot_path + '/...')]
+        for src_fpath in src_files:
+            dest_fpath = os.path.join(target_path, os.path.relpath(src_fpath, sanitized_depot_path))
+            p4.run_print('-o', dest_fpath, src_fpath)
+
+        # ToDo: change file permissions from read-only
